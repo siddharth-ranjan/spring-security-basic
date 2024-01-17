@@ -1,6 +1,7 @@
 package com.learn.spring.springsecuritylearning.controller;
 
 import com.learn.spring.springsecuritylearning.entity.UserEntity;
+import com.learn.spring.springsecuritylearning.entity.VerificationToken;
 import com.learn.spring.springsecuritylearning.event.RegistrationCompleteEvent;
 import com.learn.spring.springsecuritylearning.model.UserModel;
 import com.learn.spring.springsecuritylearning.service.UserService;
@@ -37,6 +38,37 @@ public class RegistrationController {
     public String testPost(@RequestBody String str){
         return str;
     }
+
+    @GetMapping("/verifyRegistration")
+    public String verifyRegistration(@RequestParam("token") String token){
+        String result = userService.validateVerificationToken(token);
+        if(result.equalsIgnoreCase("valid")){
+            return "User verified successfully";
+        }
+        else{
+            return "Bad request";
+        }
+    }
+
+
+    public String resendVerificationToken(@RequestParam("token") String oldToken, HttpServletRequest request){
+        VerificationToken verificationToken =
+                userService.generateNewVerificationToken(oldToken);
+
+        UserEntity user = verificationToken.getUser();
+        resendVerificationTokenMail(user, applicationUrl(request));
+        return "Verification Link Sent";
+    }
+
+    private void resendVerificationTokenMail(UserEntity user, String applicationUrl) {
+        String url =
+                applicationUrl
+                        + "/verifyRegistration?token="
+                        + token;
+
+        log.info("Click the link to verify your acc: {}", url);
+    }
+
 
     private String applicationUrl(HttpServletRequest httpServletRequest) {
         return "http://"
