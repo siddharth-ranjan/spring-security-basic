@@ -71,4 +71,9 @@ public class UserServiceImpl implements UserService {
         verificationTokenRepository.save(verificationToken);
         return verificationToken;
     }
+
+    @Override
+    public boolean checkIfEnabledUserIsPresent(UserModel userModel) {
+         return userRepository.existsByEmailAndEnabledIsTrue(userModel.getEmail());
+    }
 }

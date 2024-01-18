@@ -13,4 +13,6 @@ public interface UserService {
     String validateVerificationToken(String token);
 
     VerificationToken generateNewVerificationToken(String oldToken);
+
+    boolean checkIfEnabledUserIsPresent(UserModel userModel);
 }

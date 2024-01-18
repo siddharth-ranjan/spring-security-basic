@@ -13,6 +13,10 @@ public class UserEntity {
     )
     private Long id;
     private String fullName;
+    @Column(
+            nullable = false,
+            unique = true
+    )
     private String email;
     @Column(length = 60)
     private String password;

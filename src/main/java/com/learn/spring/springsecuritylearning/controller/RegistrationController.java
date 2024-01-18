@@ -1,13 +1,13 @@
 package com.learn.spring.springsecuritylearning.controller;
 
 import com.learn.spring.springsecuritylearning.entity.UserEntity;
-import com.learn.spring.springsecuritylearning.entity.VerificationToken;
 import com.learn.spring.springsecuritylearning.event.RegistrationCompleteEvent;
 import com.learn.spring.springsecuritylearning.model.UserModel;
 import com.learn.spring.springsecuritylearning.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,12 +21,20 @@ public class RegistrationController {
 
     @PostMapping("/register")
     public String registerUser(@RequestBody UserModel userModel, final HttpServletRequest httpServletRequest){
-        UserEntity user = userService.registerUser(userModel);
-        publisher.publishEvent(new RegistrationCompleteEvent(
-                user,
-                applicationUrl(httpServletRequest)
-        ));
-        return "Success";
+        if(userService.checkIfEnabledUserIsPresent(userModel)){
+            return "User already present";
+        }
+        try{
+            UserEntity user = userService.registerUser(userModel);
+            publisher.publishEvent(new RegistrationCompleteEvent(
+                    user,
+                    applicationUrl(httpServletRequest)
+            ));
+            return "Success";
+        }catch(DataIntegrityViolationException e){
+            return "Email already present, Please verify from the mail.";
+        }
+
     }
 
     @GetMapping("/hello")
@@ -51,23 +59,23 @@ public class RegistrationController {
     }
 
 
-    public String resendVerificationToken(@RequestParam("token") String oldToken, HttpServletRequest request){
-        VerificationToken verificationToken =
-                userService.generateNewVerificationToken(oldToken);
+//    public String resendVerificationToken(@RequestParam("token") String oldToken, HttpServletRequest request){
+//        VerificationToken verificationToken =
+//                userService.generateNewVerificationToken(oldToken);
+//
+//        UserEntity user = verificationToken.getUser();
+//        resendVerificationTokenMail(user, applicationUrl(request));
+//        return "Verification Link Sent";
+//    }
 
-        UserEntity user = verificationToken.getUser();
-        resendVerificationTokenMail(user, applicationUrl(request));
-        return "Verification Link Sent";
-    }
-
-    private void resendVerificationTokenMail(UserEntity user, String applicationUrl) {
-        String url =
-                applicationUrl
-                        + "/verifyRegistration?token="
-                        + token;
-
-        log.info("Click the link to verify your acc: {}", url);
-    }
+//    private void resendVerificationTokenMail(UserEntity user, String applicationUrl) {
+//        String url =
+//                applicationUrl
+//                        + "/verifyRegistration?token="
+//                        + token;
+//
+//        log.info("Click the link to verify your acc: {}", url);
+//    }
 
 
     private String applicationUrl(HttpServletRequest httpServletRequest) {
