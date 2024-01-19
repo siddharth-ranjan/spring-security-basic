@@ -1,16 +1,21 @@
 package com.learn.spring.springsecuritylearning.controller;
 
+import com.learn.spring.springsecuritylearning.entity.PasswordToken;
 import com.learn.spring.springsecuritylearning.entity.UserEntity;
+import com.learn.spring.springsecuritylearning.entity.VerificationToken;
 import com.learn.spring.springsecuritylearning.event.RegistrationCompleteEvent;
+import com.learn.spring.springsecuritylearning.model.PasswordModel;
 import com.learn.spring.springsecuritylearning.model.UserModel;
 import com.learn.spring.springsecuritylearning.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Slf4j
 public class RegistrationController {
 
     @Autowired
@@ -34,7 +39,6 @@ public class RegistrationController {
         }catch(DataIntegrityViolationException e){
             return "Email already present, Please verify from the mail.";
         }
-
     }
 
     @GetMapping("/hello")
@@ -59,22 +63,67 @@ public class RegistrationController {
     }
 
 
-//    public String resendVerificationToken(@RequestParam("token") String oldToken, HttpServletRequest request){
-//        VerificationToken verificationToken =
-//                userService.generateNewVerificationToken(oldToken);
-//
-//        UserEntity user = verificationToken.getUser();
-//        resendVerificationTokenMail(user, applicationUrl(request));
-//        return "Verification Link Sent";
-//    }
+    @PostMapping("/resendVerificationToken")
+    public String resendVerificationToken(@RequestParam("token") String oldToken, HttpServletRequest request){
+        VerificationToken verificationToken =
+                userService.generateNewVerificationToken(oldToken);
 
-//    private void resendVerificationTokenMail(UserEntity user, String applicationUrl) {
-//        String url =
-//                applicationUrl
-//                        + "/verifyRegistration?token="
-//                        + token;
-//
-//        log.info("Click the link to verify your acc: {}", url);
+        resendVerificationTokenMail(applicationUrl(request), verificationToken.getToken());
+        return "Verification Link Sent";
+    }
+
+    private void resendVerificationTokenMail(String applicationUrl, String token) {
+        String url =
+                applicationUrl
+                        + "/verifyRegistration?token="
+                        + token;
+
+        log.info("Click the link to verify your acc: {}", url);
+    }
+
+    @PostMapping("/forgotPassword")
+    public String forgotPassword(@RequestBody PasswordModel passwordModel, HttpServletRequest request){
+        UserEntity user = userService.getUserByEmail(passwordModel.getEmail());
+        if(user == null){
+            return "User not registered.";
+        }
+
+        PasswordToken passwordToken = userService.generateForgotPasswordToken(user);
+        String url =
+                applicationUrl(request)
+                + "/verifyForgotPassword?token="
+                + passwordToken.getToken();
+
+        log.info("Click here to reset password {}", url);
+        return "Success";
+    }
+
+    @PostMapping("/verifyForgotPassword")
+    public String verifyForgotPassword(@RequestParam("token") String token){
+        UserEntity user = userService.validateForgotPasswordToken(token);
+        if(user == null){
+            return "Bad Request";
+        }
+        log.info("Token received {}.", token);
+        return "Password changed";
+    }
+
+
+    @PostMapping("/changePassword")
+    public String changePassword(@RequestBody PasswordModel passwordModel){
+        UserEntity user = userService.getUserByEmail(passwordModel.getEmail());
+        System.out.println("user = " + user);
+        if(user == null){
+            return "User not found";
+        }
+        user = userService.changePassword(passwordModel.getNewPassword(), passwordModel.getOldPassword(), user);
+
+        return "Password Changed Successfully";
+    }
+
+//    public String generateResetPasswordToken(UserEntity user){
+//        PasswordToken passwordToken = userService.generateResetPasswordToken();
+//        return null;
 //    }
 
 
